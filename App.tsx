@@ -1,118 +1,194 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
-
-import React from 'react';
-import type {PropsWithChildren} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   SafeAreaView,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
-  useColorScheme,
+  TextInput,
+  TouchableOpacity,
   View,
 } from 'react-native';
+import * as Yup from 'yup';
+import {Formik} from 'formik';
+import BouncyCheckbox from 'react-native-bouncy-checkbox';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+const PasswordValidation = Yup.object().shape({
+  passLen: Yup.number()
+    .required('Password Length is a required parameter')
+    .min(4, 'Minimum length should be 4 characters')
+    .max(16, 'Maximum length supported is 16 characters'),
+});
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
+const App = () => {
+  const [generatedPassword, setGeneratedPassword] = useState<string>('');
+  const [includeDigits, setIncludeDigits] = useState<boolean>(false);
+  const [includeLower, setIncludeLower] = useState<boolean>(false);
+  const [includeSymbols, setIncludesSymbols] = useState<boolean>(true);
 
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+  const generatePassword = (passwordLength: number) => {
+    let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    if (includeDigits) characters += '0123456789';
+    if (includeLower) characters += 'abcdefghijklmnopqrstuvwxyz';
+    if (includeSymbols) characters += '@_+=^%$#*():<>/.';
 
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+    setGeneratedPassword(getPassword(characters, passwordLength));
+  };
+  const getPassword = (characters: string, passwordLength: number): string => {
+    let password = '';
+    for (let i = 0; i < passwordLength; i++)
+      password += characters.charAt(
+        Math.round(Math.random() * characters.length),
+      );
+    return password;
+  };
+  const resetPassword = () => {
+    setGeneratedPassword('');
+    setIncludeDigits(false);
+    setIncludeLower(false);
+    setIncludesSymbols(true);
   };
 
+  useEffect(() => {
+    console.log('Generated Password', generatedPassword);
+  }, [generatedPassword]);
+
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
+    <SafeAreaView>
+      <ScrollView contentContainerStyle={{padding: 8, gap: 10}}>
+        <Text style={styles.header}>Password Generator</Text>
+        <Formik
+          initialValues={{passLen: ''}}
+          validationSchema={PasswordValidation}
+          onSubmit={values => {
+            generatePassword(+values.passLen);
           }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
+          {({
+            values,
+            errors,
+            touched,
+            isValid,
+            handleChange,
+            handleSubmit,
+            handleReset,
+          }) => (
+            <>
+              <View>
+                <TextInput
+                  value={values.passLen}
+                  onChangeText={handleChange('passLen')}
+                  placeholder="Password Length Ex. 4"
+                  keyboardType="numeric"
+                  style={styles.textInput}
+                />
+              </View>
+              {touched.passLen && errors.passLen && (
+                <Text>{errors.passLen}</Text>
+              )}
+              <View style={styles.bouncyContainer}>
+                <Text style={styles.bouncyText}>Include Lower Case: </Text>
+                <BouncyCheckbox
+                  useBuiltInState={false}
+                  isChecked={includeLower}
+                  onPress={() => setIncludeLower(preV => !preV)}
+                  style={styles.bouncyCheckbox}
+                />
+              </View>
+              <View style={styles.bouncyContainer}>
+                <Text style={styles.bouncyText}>Include Digits: </Text>
+                <BouncyCheckbox
+                  useBuiltInState={false}
+                  isChecked={includeDigits}
+                  onPress={() => setIncludeDigits(preV => !preV)}
+                  style={styles.bouncyCheckbox}
+                />
+              </View>
+              <View style={styles.bouncyContainer}>
+                <Text style={styles.bouncyText}>Include Symbols: </Text>
+                <BouncyCheckbox
+                  useBuiltInState={false}
+                  isChecked={includeSymbols}
+                  onPress={() => setIncludesSymbols(preV => !preV)}
+                  style={styles.bouncyCheckbox}
+                />
+              </View>
+              <View style={styles.actionContainer}>
+                <TouchableOpacity
+                  style={styles.btn}
+                  onPress={() => {
+                    handleReset();
+                    resetPassword();
+                  }}>
+                  <Text style={styles.btnText}>Reset</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.btn}
+                  disabled={!isValid}
+                  onPress={() => handleSubmit()}>
+                  <Text style={styles.btnText}>Generate</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+        </Formik>
+        {generatedPassword && (
+          <View style={styles.passwordContainer}>
+            <Text style={styles.generatedPassword} selectable>
+              {generatedPassword}
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
-}
-
-const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-});
+};
 
 export default App;
+
+const styles = StyleSheet.create({
+  header: {
+    fontSize: 20,
+    textAlign: 'center',
+  },
+  btn: {
+    padding: 8,
+    backgroundColor: '#000',
+    flex: 1,
+    borderRadius: 8,
+  },
+  btnText: {
+    color: '#fff',
+    textAlign: 'center',
+  },
+  actionContainer: {
+    flexDirection: 'row',
+    gap: 20,
+  },
+  textInput: {
+    borderWidth: 2,
+    borderTopLeftRadius: 8,
+    borderBottomRightRadius: 8,
+  },
+  bouncyText: {
+    fontSize: 18,
+    flex: 1,
+  },
+  bouncyContainer: {
+    flexDirection: 'row',
+  },
+  bouncyCheckbox: {
+    flexDirection: 'column',
+  },
+  generatedPassword: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  passwordContainer: {
+    padding: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 4,
+    backgroundColor: 'red',
+    elevation: 8,
+  },
+});
